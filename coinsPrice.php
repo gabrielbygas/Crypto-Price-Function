@@ -1,5 +1,4 @@
 <?php
-
 /**
  * COINSPRICE USD FUNCTION
  * ************************
@@ -9,14 +8,11 @@
  * https://binance-docs.github.io/apidocs/spot/en/#symbol-price-ticker
  * Examples
  * https://syncwith.com/api/binance/get/api-v3-ticker-price
- * The price in US Dollars.
+ * The price is showing in US Dollars.
  * The GET request is bellow:
  * //$link = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT";
  * 
  */
-
-
-
 // To add a new coin, please add it to the $symbols array.
 // Add the symbol coins + USDT.
 // example to add SOL, add SOLUSDT.
@@ -29,6 +25,8 @@ function coinsPrice($symbols){
         foreach($symbols as $symbol){
             $link = "https://api.binance.com/api/v3/ticker/price?symbol=".$symbol."";
 
+
+            /*** file_get_contents NOT RECOMMENDED ***
             $response = file_get_contents($link);
             if ($response !== false) {
                 //parse to JSON
@@ -38,6 +36,29 @@ function coinsPrice($symbols){
 
                 $coins[] = array('symbol'=>$s, 'price'=>$p);
             }
+            */
+
+            $curl = curl_init($link);
+            //curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false); // desactiver la verification https  ... only in local  (NOT RECOMMENDED)
+
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, __DIR__ . DIRECTORY_SEPARATOR . "binanceCertificate.cer");
+
+            //curl_setopt($curl, CURLOPT_CAINFO, __DIR__.DIRECTORY_SEPARATOR."binanceCertificate.cer");
+
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            $data = curl_exec($curl);
+
+            if ($data === false){ // si erreur
+                var_dump(curl_error($curl));
+            } else{
+                //parse to JSON
+                $data = json_decode($data, TRUE);
+                $s = formatSymbol($data['symbol']);
+                $p = formatPrice($data['price']);
+
+                $coins[] = array('symbol' => $s, 'price' => $p);
+            }
+            curl_close($curl);
         }
         // only if you want to return an array
         return $coins;
@@ -80,11 +101,8 @@ function readJSONFile($coins){
     }
     echo 'readJSONFILE';
 }
-
 $coins = coinsPrice($symbols);
-//readCoins($coins);
 createJSONFile($coins);
 $file_name = 'coinsPrice.json';
 readJSONFile($file_name);
-
 ?>
